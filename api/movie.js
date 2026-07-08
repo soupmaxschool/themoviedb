@@ -22,16 +22,32 @@ export default async function handler(req, res) {
     const imdbPage = await fetch(`https://www.imdb.com/title/${imdbId}/`);
     const html = await imdbPage.text();
 
-    // Find the rating safely
+    // Try multiple rating patterns
     let imdbRating = null;
 
-    // IMDb embeds rating in: "aggregateRating":{"ratingValue":8.7
-    const ratingKey = `"aggregateRating":{"ratingValue":`;
-    const idx = html.indexOf(ratingKey);
+    const patterns = [
+      `"aggregateRating":{"ratingValue":`,
+      `"ratingValue":`,
+      `"ratingValue": "`,
+      `"ratingValue":'`,
+      `{"ratingValue":`,
+      `ratingValue":`,
+      `ratingValue": "`,
+      `ratingValue": '`,
+      `hero-rating-bar__aggregate-rating__score">`,
+      `data-testid="hero-rating-bar__aggregate-rating__score">`
+    ];
 
-    if (idx !== -1) {
-      const slice = html.slice(idx + ratingKey.length, idx + ratingKey.length + 10);
-      imdbRating = slice.split(/[^0-9.]/)[0]; // extract number
+    for (const p of patterns) {
+      const idx = html.indexOf(p);
+      if (idx !== -1) {
+        const slice = html.slice(idx + p.length, idx + p.length + 10);
+        const num = slice.match(/[0-9.]+/);
+        if (num) {
+          imdbRating = num[0];
+          break;
+        }
+      }
     }
 
     return res.json({
