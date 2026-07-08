@@ -1,5 +1,4 @@
-import { put, list, get } from "@vercel/blob";
-import { kv } from "@vercel/kv"; // ignore if not using KV
+import { put, get } from "@vercel/blob";
 
 function levenshtein(a, b) {
   const matrix = Array.from({ length: a.length + 1 }, () =>
@@ -28,7 +27,7 @@ export default async function handler(req, res) {
 
     const key = `cache/${title.toLowerCase()}.json`;
 
-    // ⭐ 1. Try Blob cache
+    // ⭐ 1. Try Blob cache FIRST
     try {
       const cached = await get(key);
       if (cached) {
@@ -37,7 +36,7 @@ export default async function handler(req, res) {
       }
     } catch {}
 
-    // ⭐ 2. IMDb fetch
+    // ⭐ 2. IMDb fetch (only if not cached)
     const firstLetter = title[0].toLowerCase();
     const imdbSearch = await fetch(
       `https://v2.sg.media-imdb.com/suggestion/${firstLetter}/${encodeURIComponent(title)}.json`
