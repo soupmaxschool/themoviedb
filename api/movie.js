@@ -24,7 +24,8 @@ export default async function handler(req, res) {
       id: first.id,
       title: first.l,
       year: first.y,
-      imdb: null // no rating, as you requested
+      poster: first.i?.imageUrl || null,
+      imdb: null // no rating by choice
     });
 
   } catch (err) {
