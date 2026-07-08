@@ -18,36 +18,37 @@ export default async function handler(req, res) {
     const first = imdbJson.d[0];
     const imdbId = first.id;
 
-    // Fetch IMDb page HTML
-    const imdbPage = await fetch(`https://www.imdb.com/title/${imdbId}/`);
-    const html = await imdbPage.text();
+    // Fetch IMDb MOBILE page (stable JSON blob)
+    const mobilePage = await fetch(`https://m.imdb.com/title/${imdbId}/`);
+    const html = await mobilePage.text();
 
-    // Try multiple rating patterns
+    // Find the JSON blob
+    const start = html.indexOf("IMDbReactInitialState");
+    if (start === -1) {
+      return res.json({
+        ok: true,
+        id: imdbId,
+        title: first.l,
+        year: first.y,
+        imdb: null
+      });
+    }
+
+    const jsonStart = html.indexOf("{", start);
+    const jsonEnd = html.indexOf("</script>", jsonStart);
+    const jsonText = html.slice(jsonStart, jsonEnd);
+
+    let data = null;
+    try {
+      data = JSON.parse(jsonText);
+    } catch {
+      data = null;
+    }
+
     let imdbRating = null;
 
-    const patterns = [
-      `"aggregateRating":{"ratingValue":`,
-      `"ratingValue":`,
-      `"ratingValue": "`,
-      `"ratingValue":'`,
-      `{"ratingValue":`,
-      `ratingValue":`,
-      `ratingValue": "`,
-      `ratingValue": '`,
-      `hero-rating-bar__aggregate-rating__score">`,
-      `data-testid="hero-rating-bar__aggregate-rating__score">`
-    ];
-
-    for (const p of patterns) {
-      const idx = html.indexOf(p);
-      if (idx !== -1) {
-        const slice = html.slice(idx + p.length, idx + p.length + 10);
-        const num = slice.match(/[0-9.]+/);
-        if (num) {
-          imdbRating = num[0];
-          break;
-        }
-      }
+    if (data && data.ratings && data.ratings.rating) {
+      imdbRating = data.ratings.rating.toString();
     }
 
     return res.json({
