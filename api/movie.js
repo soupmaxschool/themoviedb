@@ -5,9 +5,11 @@ export default async function handler(req, res) {
       return res.json({ ok: false, error: "Missing title" });
     }
 
-    // IMDb suggestion API (always works)
+    // IMDb suggestion API requires first letter of title
+    const firstLetter = title[0].toLowerCase();
+
     const imdbSearch = await fetch(
-      `https://v2.sg.media-imdb.com/suggestion/t/${encodeURIComponent(title)}.json`
+      `https://v2.sg.media-imdb.com/suggestion/${firstLetter}/${encodeURIComponent(title)}.json`
     );
     const imdbJson = await imdbSearch.json();
 
@@ -22,7 +24,7 @@ export default async function handler(req, res) {
       id: first.id,
       title: first.l,
       year: first.y,
-      imdb: null // intentionally no rating
+      imdb: null // no rating, as you requested
     });
 
   } catch (err) {
