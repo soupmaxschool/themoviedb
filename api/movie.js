@@ -18,37 +18,20 @@ export default async function handler(req, res) {
     const first = imdbJson.d[0];
     const imdbId = first.id;
 
-    // Fetch IMDb MOBILE page (stable JSON blob)
-    const mobilePage = await fetch(`https://m.imdb.com/title/${imdbId}/`);
-    const html = await mobilePage.text();
+    // Fetch IMDb ratings page (fast, stable)
+    const ratingsPage = await fetch(`https://www.imdb.com/title/${imdbId}/ratings`);
+    const html = await ratingsPage.text();
 
-    // Find the JSON blob
-    const start = html.indexOf("IMDbReactInitialState");
-    if (start === -1) {
-      return res.json({
-        ok: true,
-        id: imdbId,
-        title: first.l,
-        year: first.y,
-        imdb: null
-      });
-    }
-
-    const jsonStart = html.indexOf("{", start);
-    const jsonEnd = html.indexOf("</script>", jsonStart);
-    const jsonText = html.slice(jsonStart, jsonEnd);
-
-    let data = null;
-    try {
-      data = JSON.parse(jsonText);
-    } catch {
-      data = null;
-    }
-
+    // Extract rating from JSON blob
     let imdbRating = null;
 
-    if (data && data.ratings && data.ratings.rating) {
-      imdbRating = data.ratings.rating.toString();
+    const key = `"ratingValue":`;
+    const idx = html.indexOf(key);
+
+    if (idx !== -1) {
+      const slice = html.slice(idx + key.length, idx + key.length + 10);
+      const num = slice.match(/[0-9.]+/);
+      if (num) imdbRating = num[0];
     }
 
     return res.json({
