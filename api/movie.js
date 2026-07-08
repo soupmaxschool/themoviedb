@@ -5,11 +5,14 @@ export default async function handler(req, res) {
       return res.json({ ok: false, error: "Missing title" });
     }
 
-    // TMDb v4 public mirror (no key needed)
-    const tmdb = await fetch(
-      `https://api.themoviedb.org/4/search?query=${encodeURIComponent(title)}`
+    // Free proxy that fetches TMDb safely
+    const proxy = await fetch(
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(
+        `https://api.themoviedb.org/3/search/movie?query=${title}&api_key=1`
+      )}`
     );
-    const data = await tmdb.json();
+
+    const data = await proxy.json();
 
     if (!data?.results || data.results.length === 0) {
       return res.json({ ok: false, error: "Movie not found" });
