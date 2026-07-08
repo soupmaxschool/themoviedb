@@ -1,7 +1,7 @@
 import { put, get } from "@vercel/blob";
 import { NextResponse } from "next/server";
 
-// Levenshtein fuzzy match
+// Fuzzy match
 function levenshtein(a, b) {
   const matrix = Array.from({ length: a.length + 1 }, () =>
     Array(b.length + 1).fill(0)
@@ -22,7 +22,7 @@ function levenshtein(a, b) {
   return matrix[a.length][b.length];
 }
 
-// Safe Blob read (never crashes)
+// Safe Blob read
 async function readCache(key) {
   try {
     const file = await get(key);
@@ -43,7 +43,7 @@ export async function GET(req) {
 
   const key = `cache/${title.toLowerCase()}.json`;
 
-  // ⭐ 1. Try Blob cache first
+  // ⭐ 1. Try Blob cache
   const cached = await readCache(key);
   if (cached) {
     return NextResponse.json({ ok: true, cached: true, ...cached });
