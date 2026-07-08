@@ -25,7 +25,10 @@ export default async function handler(req, res) {
     const imdbHtml = await imdbPage.text();
     const $imdb = cheerio.load(imdbHtml);
 
-    const imdbRating = $imdb('[data-testid="hero-rating-bar__aggregate-rating__score"]').text().split('/')[0] || null;
+    const imdbRating = $imdb('[data-testid="hero-rating-bar__aggregate-rating__score"]')
+      .text()
+      .split('/')[0]
+      .trim() || null;
 
     // Rotten Tomatoes search → URL
     const rtSearch = await fetch(`https://www.rottentomatoes.com/search?search=${title}`);
