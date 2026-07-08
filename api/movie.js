@@ -1,3 +1,26 @@
+// Simple Levenshtein distance (fuzzy match)
+function levenshtein(a, b) {
+  const matrix = Array.from({ length: a.length + 1 }, () =>
+    Array(b.length + 1).fill(0)
+  );
+
+  for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+  for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost
+      );
+    }
+  }
+
+  return matrix[a.length][b.length];
+}
+
 export default async function handler(req, res) {
   try {
     const title = req.query.title;
@@ -5,7 +28,6 @@ export default async function handler(req, res) {
       return res.json({ ok: false, error: "Missing title" });
     }
 
-    // IMDb suggestion API requires first letter of title
     const firstLetter = title[0].toLowerCase();
 
     const imdbSearch = await fetch(
@@ -17,15 +39,31 @@ export default async function handler(req, res) {
       return res.json({ ok: false, error: "Movie not found" });
     }
 
-    const first = imdbJson.d[0];
+    // Fuzzy match all results
+    const scored = imdbJson.d.map(item => {
+      const name = item.l.toLowerCase();
+      const query = title.toLowerCase();
+
+      const lev = levenshtein(name, query);
+      const starts = name.startsWith(query) ? 0 : 1;
+      const contains = name.includes(query) ? 0 : 1;
+
+      const score = lev + starts + contains;
+
+      return { item, score };
+    });
+
+    // Best match
+    scored.sort((a, b) => a.score - b.score);
+    const best = scored[0].item;
 
     return res.json({
       ok: true,
-      id: first.id,
-      title: first.l,
-      year: first.y,
-      poster: first.i?.imageUrl || null,
-      imdb: null // no rating by choice
+      id: best.id,
+      title: best.l,
+      year: best.y,
+      poster: best.i?.imageUrl || null,
+      imdb: null
     });
 
   } catch (err) {
