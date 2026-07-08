@@ -1,4 +1,3 @@
-import { put, get } from "@vercel/blob";
 import { NextResponse } from "next/server";
 
 // Fuzzy match
@@ -22,17 +21,6 @@ function levenshtein(a, b) {
   return matrix[a.length][b.length];
 }
 
-// Safe Blob read
-async function readCache(key) {
-  try {
-    const file = await get(key);
-    if (!file) return null;
-    return await file.json();
-  } catch {
-    return null;
-  }
-}
-
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const title = searchParams.get("title");
@@ -41,15 +29,7 @@ export async function GET(req) {
     return NextResponse.json({ ok: false, error: "Missing title" });
   }
 
-  const key = `cache/${title.toLowerCase()}.json`;
-
-  // ⭐ 1. Try Blob cache
-  const cached = await readCache(key);
-  if (cached) {
-    return NextResponse.json({ ok: true, cached: true, ...cached });
-  }
-
-  // ⭐ 2. IMDb fetch
+  // IMDb suggestion API
   const firstLetter = title[0].toLowerCase();
   const imdbSearch = await fetch(
     `https://v2.sg.media-imdb.com/suggestion/${firstLetter}/${encodeURIComponent(title)}.json`
@@ -60,7 +40,7 @@ export async function GET(req) {
     return NextResponse.json({ ok: false, error: "Movie not found" });
   }
 
-  // ⭐ 3. Fuzzy match
+  // Fuzzy match
   const scored = imdbJson.d.map(item => {
     const name = item.l.toLowerCase();
     const query = title.toLowerCase();
@@ -80,11 +60,6 @@ export async function GET(req) {
     poster: best.i?.imageUrl || null,
     imdb: null
   };
-
-  // ⭐ 4. Save to Blob cache
-  await put(key, JSON.stringify(movie), {
-    contentType: "application/json"
-  });
 
   return NextResponse.json({ ok: true, cached: false, ...movie });
 }
