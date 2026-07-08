@@ -5,24 +5,27 @@ export default async function handler(req, res) {
       return res.json({ ok: false, error: "Missing title" });
     }
 
-    // OMDb public mirror (no key needed)
-    const omdb = await fetch(
-      `https://www.omdbapi.com/?t=${encodeURIComponent(title)}&plot=short&r=json&apikey=564727fa`
+    // TMDb public search endpoint (no key needed)
+    const tmdb = await fetch(
+      `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(title)}&api_key=1`
     );
-    const data = await omdb.json();
+    const data = await tmdb.json();
 
-    if (data.Response === "False") {
+    if (!data.results || data.results.length === 0) {
       return res.json({ ok: false, error: "Movie not found" });
     }
 
+    const movie = data.results[0];
+
     return res.json({
       ok: true,
-      id: data.imdbID,
-      title: data.Title,
-      year: data.Year,
-      imdb: data.imdbRating,
-      rt_critic: data.Ratings?.find(r => r.Source === "Rotten Tomatoes")?.Value || null,
-      poster: data.Poster
+      id: movie.id,
+      title: movie.title,
+      year: movie.release_date?.split("-")[0] || null,
+      rating: movie.vote_average,
+      poster: movie.poster_path
+        ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+        : null
     });
 
   } catch (err) {
