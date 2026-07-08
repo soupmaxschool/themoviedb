@@ -23,7 +23,7 @@ async function loadDB() {
 }
 
 async function saveMovie(movie) {
-  await fetch("https://your-vercel-app.vercel.app/api/movie", {
+  await fetch("https://themoviedb-brown-rho.vercel.app/api/movie", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(movie)
