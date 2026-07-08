@@ -5,7 +5,7 @@ export default async function handler(req, res) {
       return res.json({ ok: false, error: "Missing title" });
     }
 
-    // IMDb suggestion API (no key, no extra deps)
+    // IMDb suggestion API
     const imdbSearch = await fetch(
       `https://v2.sg.media-imdb.com/suggestion/t/${encodeURIComponent(title)}.json`
     );
@@ -16,13 +16,30 @@ export default async function handler(req, res) {
     }
 
     const first = imdbJson.d[0];
+    const imdbId = first.id;
+
+    // Fetch IMDb page HTML
+    const imdbPage = await fetch(`https://www.imdb.com/title/${imdbId}/`);
+    const html = await imdbPage.text();
+
+    // Find the rating safely
+    let imdbRating = null;
+
+    // IMDb embeds rating in: "aggregateRating":{"ratingValue":8.7
+    const ratingKey = `"aggregateRating":{"ratingValue":`;
+    const idx = html.indexOf(ratingKey);
+
+    if (idx !== -1) {
+      const slice = html.slice(idx + ratingKey.length, idx + ratingKey.length + 10);
+      imdbRating = slice.split(/[^0-9.]/)[0]; // extract number
+    }
 
     return res.json({
       ok: true,
-      id: first.id,
+      id: imdbId,
       title: first.l,
       year: first.y,
-      // no rating yet, but backend is stable
+      imdb: imdbRating
     });
 
   } catch (err) {
