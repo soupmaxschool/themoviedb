@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Soup Movie DB</title>
+  <style>
+    body { font-family: sans-serif; background:#111; color:#eee; }
+    .movie { padding:10px; margin:10px; background:#222; border-radius:8px; }
+  </style>
+</head>
+<body>
+
+<h1>Soup Movie Database</h1>
+
+<input id="search" placeholder="Search a movie..." style="width:300px;padding:8px;">
+<button onclick="searchMovie()">Search</button>
+
+<div id="movies"></div>
+
+<script>
+async function loadDB() {
+  return await fetch("movies.json").then(r => r.json());
+}
+
+async function saveMovie(movie) {
+  await fetch("https://your-vercel-app.vercel.app/api/movie", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(movie)
+  });
+}
+
+async function searchMovie() {
+  const title = document.getElementById("search").value.trim();
+  if (!title) return;
+
+  let db = await loadDB();
+  let found = db.find(m => m.title.toLowerCase() === title.toLowerCase());
+
+  if (found) {
+    display([found]);
+    return;
+  }
+
+  const scraped = await fetch(`https://your-vercel-app.vercel.app/api/movie?title=${encodeURIComponent(title)}`)
+    .then(r => r.json());
+
+  await saveMovie(scraped);
+
+  display([scraped]);
+}
+
+function display(list) {
+  const container = document.getElementById("movies");
+  container.innerHTML = "";
+  list.forEach(m => {
+    const div = document.createElement("div");
+    div.className = "movie";
+    div.innerHTML = `
+      <h2>${m.title} (${m.year})</h2>
+      <p>IMDb: ${m.imdb}</p>
+      <p>Rotten Tomatoes: ${m.rt_critic}% critics / ${m.rt_audience}% audience</p>
+    `;
+    container.appendChild(div);
+  });
+}
+
+loadDB().then(display);
+</script>
+
+</body>
+</html>
