@@ -5,13 +5,10 @@ export default async function handler(req, res) {
       return res.json({ ok: false, error: "Missing title" });
     }
 
-    // Free proxy that fetches TMDb safely
-    const proxy = await fetch(
-      `https://api.allorigins.win/raw?url=${encodeURIComponent(
-        `https://api.themoviedb.org/3/search/movie?query=${title}&api_key=1`
-      )}`
-    );
+    // Use TMDb through corsproxy.io (unblocked)
+    const url = `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(title)}&api_key=1`;
 
+    const proxy = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
     const data = await proxy.json();
 
     if (!data?.results || data.results.length === 0) {
