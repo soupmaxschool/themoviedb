@@ -29,26 +29,6 @@
       margin-bottom: 20px;
     }
 
-    #results {
-      width: 320px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-
-    .resultItem {
-      background: #222;
-      padding: 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-
-    .resultItem:hover {
-      background: #333;
-    }
-
     #details {
       width: 360px;
       background: #222;
@@ -106,8 +86,6 @@
 
   <input id="searchBox" type="text" placeholder="Search for a movie…">
 
-  <div id="results"></div>
-
   <div id="details">
     <img id="detailsPoster" src="" alt="Poster">
     <div id="detailsTitle"></div>
@@ -123,13 +101,11 @@
 
   <script>
     const input = document.getElementById("searchBox");
-    const resultsBox = document.getElementById("results");
     const detailsBox = document.getElementById("details");
     const errorBox = document.getElementById("error");
 
     input.addEventListener("keyup", async (e) => {
       const title = e.target.value.trim();
-      resultsBox.innerHTML = "";
       errorBox.style.display = "none";
 
       if (!title) {
@@ -148,64 +124,57 @@
           return;
         }
 
-        const item = document.createElement("div");
-        item.className = "resultItem";
-        item.textContent = `${data.title} (${data.year || "?"})`;
+        // Basic details
+        document.getElementById("detailsPoster").src = data.poster || "";
+        document.getElementById("detailsTitle").textContent = data.title;
+        document.getElementById("detailsYear").textContent = data.year || "Unknown";
 
-        item.onclick = async () => {
-          document.getElementById("detailsPoster").src = data.poster || "";
-          document.getElementById("detailsTitle").textContent = data.title;
-          document.getElementById("detailsYear").textContent = data.year || "Unknown";
+        // Fetch full details
+        const detailsRes = await fetch(`https://v2.sg.media-imdb.com/titles/${data.id}/details`);
+        const detailsJson = await detailsRes.json();
 
-          // Fetch full details
-          const detailsRes = await fetch(`https://v2.sg.media-imdb.com/titles/${data.id}/details`);
-          const detailsJson = await detailsRes.json();
+        const plotRes = await fetch(`https://v2.sg.media-imdb.com/titles/${data.id}/plots`);
+        const plotJson = await plotRes.json();
 
-          const plotRes = await fetch(`https://v2.sg.media-imdb.com/titles/${data.id}/plots`);
-          const plotJson = await plotRes.json();
+        // Plot
+        let plot = "No plot summary available.";
+        if (plotJson?.plots?.length > 0 && plotJson.plots[0].text) {
+          plot = plotJson.plots[0].text;
+        }
+        document.getElementById("detailsPlot").textContent = plot;
 
-          // Plot
-          let plot = "No plot summary available.";
-          if (plotJson?.plots?.length > 0 && plotJson.plots[0].text) {
-            plot = plotJson.plots[0].text;
-          }
-          document.getElementById("detailsPlot").textContent = plot;
+        // Cast
+        let cast = "No cast info.";
+        if (detailsJson?.credits?.cast?.length > 0) {
+          cast = "Cast: " + detailsJson.credits.cast.slice(0, 5).map(c => c.name).join(", ");
+        }
+        document.getElementById("detailsCast").textContent = cast;
 
-          // Cast
-          let cast = "No cast info.";
-          if (detailsJson?.credits?.cast?.length > 0) {
-            cast = "Cast: " + detailsJson.credits.cast.slice(0, 5).map(c => c.name).join(", ");
-          }
-          document.getElementById("detailsCast").textContent = cast;
+        // Genres
+        let genres = "Genres: Unknown";
+        if (detailsJson?.genres?.length > 0) {
+          genres = "Genres: " + detailsJson.genres.join(", ");
+        }
+        document.getElementById("detailsGenres").textContent = genres;
 
-          // Genres
-          let genres = "Genres: Unknown";
-          if (detailsJson?.genres?.length > 0) {
-            genres = "Genres: " + detailsJson.genres.join(", ");
-          }
-          document.getElementById("detailsGenres").textContent = genres;
+        // Runtime
+        let runtime = "Runtime: Unknown";
+        if (detailsJson?.runtime?.seconds) {
+          const mins = Math.round(detailsJson.runtime.seconds / 60);
+          runtime = `Runtime: ${mins} min`;
+        }
+        document.getElementById("detailsRuntime").textContent = runtime;
 
-          // Runtime
-          let runtime = "Runtime: Unknown";
-          if (detailsJson?.runtime?.seconds) {
-            const mins = Math.round(detailsJson.runtime.seconds / 60);
-            runtime = `Runtime: ${mins} min`;
-          }
-          document.getElementById("detailsRuntime").textContent = runtime;
+        // Rating stars
+        let rating = "Rating: N/A";
+        if (detailsJson?.ratings?.rating) {
+          const r = detailsJson.ratings.rating;
+          const stars = "★".repeat(Math.round(r)) + "☆".repeat(10 - Math.round(r));
+          rating = `Rating: ${r}/10  ${stars}`;
+        }
+        document.getElementById("detailsRating").textContent = rating;
 
-          // Rating stars
-          let rating = "Rating: N/A";
-          if (detailsJson?.ratings?.rating) {
-            const r = detailsJson.ratings.rating;
-            const stars = "★".repeat(Math.round(r)) + "☆".repeat(10 - Math.round(r));
-            rating = `Rating: ${r}/10  ${stars}`;
-          }
-          document.getElementById("detailsRating").textContent = rating;
-
-          detailsBox.style.display = "block";
-        };
-
-        resultsBox.appendChild(item);
+        detailsBox.style.display = "block";
 
       } catch (err) {
         errorBox.textContent = "Network error";
