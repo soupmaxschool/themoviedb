@@ -1,72 +1,122 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Soup Movie DB</title>
+  <title>Movie Lookup</title>
   <style>
-    body { font-family: sans-serif; background:#111; color:#eee; }
-    .movie { padding:10px; margin:10px; background:#222; border-radius:8px; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #111;
+      color: #eee;
+      margin: 0;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+
+    #searchBox {
+      width: 300px;
+      padding: 12px;
+      border-radius: 6px;
+      border: none;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+
+    #result {
+      margin-top: 30px;
+      width: 320px;
+      background: #222;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      display: none;
+    }
+
+    #poster {
+      width: 100%;
+      border-radius: 10px;
+      margin-bottom: 15px;
+    }
+
+    .title {
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .year {
+      font-size: 16px;
+      opacity: 0.7;
+    }
+
+    #error {
+      margin-top: 20px;
+      color: #ff6b6b;
+      font-size: 16px;
+      display: none;
+    }
   </style>
 </head>
 <body>
 
-<h1>Soup Movie Database</h1>
+  <h1>Movie Lookup</h1>
 
-<input id="search" placeholder="Search a movie..." style="width:300px;padding:8px;">
-<button onclick="searchMovie()">Search</button>
+  <input id="searchBox" type="text" placeholder="Search for a movie…">
 
-<div id="movies"></div>
+  <div id="result">
+    <img id="poster" src="" alt="Poster">
+    <div class="title" id="title"></div>
+    <div class="year" id="year"></div>
+  </div>
 
-<script>
-async function loadDB() {
-  return await fetch("movies.json").then(r => r.json());
-}
+  <div id="error"></div>
 
-async function saveMovie(movie) {
-  await fetch("https://themoviedb-brown-rho.vercel.app/api/movie", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(movie)
-  });
-}
+  <script>
+    const input = document.getElementById("searchBox");
+    const resultBox = document.getElementById("result");
+    const errorBox = document.getElementById("error");
 
-async function searchMovie() {
-  const title = document.getElementById("search").value.trim();
-  if (!title) return;
+    input.addEventListener("keyup", async (e) => {
+      const title = e.target.value.trim();
+      if (!title) {
+        resultBox.style.display = "none";
+        errorBox.style.display = "none";
+        return;
+      }
 
-  let db = await loadDB();
-  let found = db.find(m => m.title.toLowerCase() === title.toLowerCase());
+      try {
+        const res = await fetch(`/api/movie?title=${encodeURIComponent(title)}`);
+        const data = await res.json();
 
-  if (found) {
-    display([found]);
-    return;
-  }
+        if (!data.ok) {
+          errorBox.textContent = data.error;
+          errorBox.style.display = "block";
+          resultBox.style.display = "none";
+          return;
+        }
 
-  const scraped = await fetch(`https://your-vercel-app.vercel.app/api/movie?title=${encodeURIComponent(title)}`)
-    .then(r => r.json());
+        errorBox.style.display = "none";
 
-  await saveMovie(scraped);
+        document.getElementById("poster").src = data.poster || "";
+        document.getElementById("title").textContent = data.title;
+        document.getElementById("year").textContent = data.year || "Unknown";
 
-  display([scraped]);
-}
+        resultBox.style.display = "block";
 
-function display(list) {
-  const container = document.getElementById("movies");
-  container.innerHTML = "";
-  list.forEach(m => {
-    const div = document.createElement("div");
-    div.className = "movie";
-    div.innerHTML = `
-      <h2>${m.title} (${m.year})</h2>
-      <p>IMDb: ${m.imdb}</p>
-      <p>Rotten Tomatoes: ${m.rt_critic}% critics / ${m.rt_audience}% audience</p>
-    `;
-    container.appendChild(div);
-  });
-}
-
-loadDB().then(display);
-</script>
+      } catch (err) {
+        errorBox.textContent = "Network error";
+        errorBox.style.display = "block";
+        resultBox.style.display = "none";
+      }
+    });
+  </script>
 
 </body>
 </html>
