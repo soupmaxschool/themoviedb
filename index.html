@@ -34,6 +34,7 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
+      margin-bottom: 20px;
     }
 
     .resultItem {
@@ -49,7 +50,6 @@
     }
 
     #details {
-      margin-top: 30px;
       width: 360px;
       background: #222;
       padding: 20px;
@@ -81,11 +81,11 @@
       margin-bottom: 10px;
     }
 
-    #detailsPlot,
-    #detailsCast,
-    #detailsGenres,
+    #detailsRating,
     #detailsRuntime,
-    #detailsRating {
+    #detailsGenres,
+    #detailsCast,
+    #detailsPlot {
       font-size: 16px;
       line-height: 1.4;
       opacity: 0.9;
@@ -130,10 +130,12 @@
     input.addEventListener("keyup", async (e) => {
       const title = e.target.value.trim();
       resultsBox.innerHTML = "";
-      detailsBox.style.display = "none";
       errorBox.style.display = "none";
 
-      if (!title) return;
+      if (!title) {
+        detailsBox.style.display = "none";
+        return;
+      }
 
       try {
         const res = await fetch(`/api/movie?title=${encodeURIComponent(title)}`);
@@ -142,6 +144,7 @@
         if (!data.ok) {
           errorBox.textContent = data.error;
           errorBox.style.display = "block";
+          detailsBox.style.display = "none";
           return;
         }
 
@@ -154,35 +157,35 @@
           document.getElementById("detailsTitle").textContent = data.title;
           document.getElementById("detailsYear").textContent = data.year || "Unknown";
 
-          // Fetch full details from IMDb
+          // Fetch full details
           const detailsRes = await fetch(`https://v2.sg.media-imdb.com/titles/${data.id}/details`);
           const detailsJson = await detailsRes.json();
 
           const plotRes = await fetch(`https://v2.sg.media-imdb.com/titles/${data.id}/plots`);
           const plotJson = await plotRes.json();
 
-          // ⭐ Plot
+          // Plot
           let plot = "No plot summary available.";
           if (plotJson?.plots?.length > 0 && plotJson.plots[0].text) {
             plot = plotJson.plots[0].text;
           }
           document.getElementById("detailsPlot").textContent = plot;
 
-          // ⭐ Cast
+          // Cast
           let cast = "No cast info.";
           if (detailsJson?.credits?.cast?.length > 0) {
             cast = "Cast: " + detailsJson.credits.cast.slice(0, 5).map(c => c.name).join(", ");
           }
           document.getElementById("detailsCast").textContent = cast;
 
-          // ⭐ Genres
+          // Genres
           let genres = "Genres: Unknown";
           if (detailsJson?.genres?.length > 0) {
             genres = "Genres: " + detailsJson.genres.join(", ");
           }
           document.getElementById("detailsGenres").textContent = genres;
 
-          // ⭐ Runtime
+          // Runtime
           let runtime = "Runtime: Unknown";
           if (detailsJson?.runtime?.seconds) {
             const mins = Math.round(detailsJson.runtime.seconds / 60);
@@ -190,7 +193,7 @@
           }
           document.getElementById("detailsRuntime").textContent = runtime;
 
-          // ⭐ Rating stars
+          // Rating stars
           let rating = "Rating: N/A";
           if (detailsJson?.ratings?.rating) {
             const r = detailsJson.ratings.rating;
@@ -207,6 +210,7 @@
       } catch (err) {
         errorBox.textContent = "Network error";
         errorBox.style.display = "block";
+        detailsBox.style.display = "none";
       }
     });
   </script>
