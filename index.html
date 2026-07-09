@@ -29,31 +29,56 @@
       margin-bottom: 20px;
     }
 
-    #result {
-      margin-top: 30px;
+    #results {
       width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .resultItem {
+      background: #222;
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .resultItem:hover {
+      background: #333;
+    }
+
+    #details {
+      margin-top: 30px;
+      width: 360px;
       background: #222;
       padding: 20px;
       border-radius: 10px;
-      text-align: center;
       display: none;
+      animation: fadeIn 0.3s ease;
     }
 
-    #poster {
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    #detailsPoster {
       width: 100%;
       border-radius: 10px;
       margin-bottom: 15px;
     }
 
-    .title {
-      font-size: 22px;
+    #detailsTitle {
+      font-size: 24px;
       font-weight: 600;
       margin-bottom: 5px;
     }
 
-    .year {
-      font-size: 16px;
+    #detailsYear {
+      font-size: 18px;
       opacity: 0.7;
+      margin-bottom: 10px;
     }
 
     #error {
@@ -70,26 +95,29 @@
 
   <input id="searchBox" type="text" placeholder="Search for a movie…">
 
-  <div id="result">
-    <img id="poster" src="" alt="Poster">
-    <div class="title" id="title"></div>
-    <div class="year" id="year"></div>
+  <div id="results"></div>
+
+  <div id="details">
+    <img id="detailsPoster" src="" alt="Poster">
+    <div id="detailsTitle"></div>
+    <div id="detailsYear"></div>
   </div>
 
   <div id="error"></div>
 
   <script>
     const input = document.getElementById("searchBox");
-    const resultBox = document.getElementById("result");
+    const resultsBox = document.getElementById("results");
+    const detailsBox = document.getElementById("details");
     const errorBox = document.getElementById("error");
 
     input.addEventListener("keyup", async (e) => {
       const title = e.target.value.trim();
-      if (!title) {
-        resultBox.style.display = "none";
-        errorBox.style.display = "none";
-        return;
-      }
+      resultsBox.innerHTML = "";
+      detailsBox.style.display = "none";
+      errorBox.style.display = "none";
+
+      if (!title) return;
 
       try {
         const res = await fetch(`/api/movie?title=${encodeURIComponent(title)}`);
@@ -98,22 +126,26 @@
         if (!data.ok) {
           errorBox.textContent = data.error;
           errorBox.style.display = "block";
-          resultBox.style.display = "none";
           return;
         }
 
-        errorBox.style.display = "none";
+        // Create clickable result item
+        const item = document.createElement("div");
+        item.className = "resultItem";
+        item.textContent = `${data.title} (${data.year || "?"})`;
 
-        document.getElementById("poster").src = data.poster || "";
-        document.getElementById("title").textContent = data.title;
-        document.getElementById("year").textContent = data.year || "Unknown";
+        item.onclick = () => {
+          document.getElementById("detailsPoster").src = data.poster || "";
+          document.getElementById("detailsTitle").textContent = data.title;
+          document.getElementById("detailsYear").textContent = data.year || "Unknown";
+          detailsBox.style.display = "block";
+        };
 
-        resultBox.style.display = "block";
+        resultsBox.appendChild(item);
 
       } catch (err) {
         errorBox.textContent = "Network error";
         errorBox.style.display = "block";
-        resultBox.style.display = "none";
       }
     });
   </script>
