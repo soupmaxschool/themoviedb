@@ -81,6 +81,17 @@
       margin-bottom: 10px;
     }
 
+    #detailsPlot,
+    #detailsCast,
+    #detailsGenres,
+    #detailsRuntime,
+    #detailsRating {
+      font-size: 16px;
+      line-height: 1.4;
+      opacity: 0.9;
+      margin-top: 10px;
+    }
+
     #error {
       margin-top: 20px;
       color: #ff6b6b;
@@ -101,6 +112,11 @@
     <img id="detailsPoster" src="" alt="Poster">
     <div id="detailsTitle"></div>
     <div id="detailsYear"></div>
+    <div id="detailsRating"></div>
+    <div id="detailsRuntime"></div>
+    <div id="detailsGenres"></div>
+    <div id="detailsCast"></div>
+    <div id="detailsPlot"></div>
   </div>
 
   <div id="error"></div>
@@ -129,15 +145,60 @@
           return;
         }
 
-        // Create clickable result item
         const item = document.createElement("div");
         item.className = "resultItem";
         item.textContent = `${data.title} (${data.year || "?"})`;
 
-        item.onclick = () => {
+        item.onclick = async () => {
           document.getElementById("detailsPoster").src = data.poster || "";
           document.getElementById("detailsTitle").textContent = data.title;
           document.getElementById("detailsYear").textContent = data.year || "Unknown";
+
+          // Fetch full details from IMDb
+          const detailsRes = await fetch(`https://v2.sg.media-imdb.com/titles/${data.id}/details`);
+          const detailsJson = await detailsRes.json();
+
+          const plotRes = await fetch(`https://v2.sg.media-imdb.com/titles/${data.id}/plots`);
+          const plotJson = await plotRes.json();
+
+          // ⭐ Plot
+          let plot = "No plot summary available.";
+          if (plotJson?.plots?.length > 0 && plotJson.plots[0].text) {
+            plot = plotJson.plots[0].text;
+          }
+          document.getElementById("detailsPlot").textContent = plot;
+
+          // ⭐ Cast
+          let cast = "No cast info.";
+          if (detailsJson?.credits?.cast?.length > 0) {
+            cast = "Cast: " + detailsJson.credits.cast.slice(0, 5).map(c => c.name).join(", ");
+          }
+          document.getElementById("detailsCast").textContent = cast;
+
+          // ⭐ Genres
+          let genres = "Genres: Unknown";
+          if (detailsJson?.genres?.length > 0) {
+            genres = "Genres: " + detailsJson.genres.join(", ");
+          }
+          document.getElementById("detailsGenres").textContent = genres;
+
+          // ⭐ Runtime
+          let runtime = "Runtime: Unknown";
+          if (detailsJson?.runtime?.seconds) {
+            const mins = Math.round(detailsJson.runtime.seconds / 60);
+            runtime = `Runtime: ${mins} min`;
+          }
+          document.getElementById("detailsRuntime").textContent = runtime;
+
+          // ⭐ Rating stars
+          let rating = "Rating: N/A";
+          if (detailsJson?.ratings?.rating) {
+            const r = detailsJson.ratings.rating;
+            const stars = "★".repeat(Math.round(r)) + "☆".repeat(10 - Math.round(r));
+            rating = `Rating: ${r}/10  ${stars}`;
+          }
+          document.getElementById("detailsRating").textContent = rating;
+
           detailsBox.style.display = "block";
         };
 
