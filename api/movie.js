@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 
-// Fuzzy match
+// Simple Levenshtein distance (fuzzy match)
 function levenshtein(a, b) {
   const matrix = Array.from({ length: a.length + 1 }, () =>
     Array(b.length + 1).fill(0)
   );
+
   for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
   for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
 
@@ -18,6 +19,7 @@ function levenshtein(a, b) {
       );
     }
   }
+
   return matrix[a.length][b.length];
 }
 
@@ -44,22 +46,25 @@ export async function GET(req) {
   const scored = imdbJson.d.map(item => {
     const name = item.l.toLowerCase();
     const query = title.toLowerCase();
+
     const lev = levenshtein(name, query);
     const starts = name.startsWith(query) ? 0 : 1;
     const contains = name.includes(query) ? 0 : 1;
-    return { item, score: lev + starts + contains };
+
+    const score = lev + starts + contains;
+
+    return { item, score };
   });
 
   scored.sort((a, b) => a.score - b.score);
   const best = scored[0].item;
 
-  const movie = {
+  return NextResponse.json({
+    ok: true,
     id: best.id,
     title: best.l,
     year: best.y,
     poster: best.i?.imageUrl || null,
     imdb: null
-  };
-
-  return NextResponse.json({ ok: true, cached: false, ...movie });
+  });
 }
